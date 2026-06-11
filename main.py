@@ -20,9 +20,10 @@ from src.api_client import APIError, LawAPIClient
 from src import parser, snapshot, reporter
 
 
-DATA_DIR   = os.path.join(os.path.dirname(__file__), "data")
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
-LAWS_FILE  = os.path.join(os.path.dirname(__file__), "..", "laws.json")
+DATA_DIR        = os.path.join(os.path.dirname(__file__), "data")
+OUTPUT_DIR      = os.path.join(os.path.dirname(__file__), "output")
+LAWS_FILE       = os.path.join(os.path.dirname(__file__), "..", "laws.json")
+AMENDMENTS_FILE = os.path.join(os.path.dirname(__file__), "..", "amendments.json")
 
 
 def _norm(s: str) -> str:
@@ -286,6 +287,24 @@ def main() -> None:
     errors    = [r for r in results if r["status"] == "오류"]
 
     print(f"\n확인 완료: 신규 등록 {len(new_regs)}건 / 개정 {len(changed)}건 / 변경 없음 {len(no_change)}건 / 오류 {len(errors)}건")
+
+    # 개정분을 amendments.json으로 출력 (03. 이메일 알림 프로젝트가 소비)
+    amendments = {
+        "생성일시": datetime.now().strftime("%Y-%m-%dT%H:%M"),
+        "개정": [
+            {
+                "법령명":     r["law_name"],
+                "이전시행일": r["old_date"],
+                "현재시행일": r["new_date"],
+                "개정조문수": r["article_count"],
+                "조문":       r["articles"],
+            }
+            for r in changed
+        ],
+    }
+    with open(AMENDMENTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(amendments, f, ensure_ascii=False, indent=2)
+    print(f"amendments.json 기록 완료 (개정 {len(changed)}건)  ->  {AMENDMENTS_FILE}")
 
     if args.no_report:
         print("--no-report 옵션으로 리포트 생성을 건너뜁니다.")
